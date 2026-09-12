@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>配方查詢與問答系統</title>
+  <style>
+    :root {
+      --bg: #f2f6ff;
+      --surface: #ffffff;
+      --surface-soft: #f7faff;
+      --text: #111827;
+      --muted: #5f6b7a;
+      --border: #d9e2f0;
+      --primary: #2f6bff;
+      --primary-2: #4f83ff;
+      --success: #16a34a;
+      --warning: #b45309;
+      --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      --radius: 16px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --surface: #111827;
+      --surface-soft: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #374151;
+      --primary: #60a5fa;
+      --primary-2: #93c5fd;
+      --shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1100px 400px at 5% -20%, rgba(47, 107, 255, 0.14), transparent 55%),
+        radial-gradient(900px 320px at 110% 10%, rgba(99, 102, 241, 0.14), transparent 55%),
+        var(--bg);
+      min-height: 100%;
+    }
+
+    body { padding: 20px; }
+
+    .app {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .topbar {
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, var(--surface), var(--surface-soft));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    .topbar p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      display: inline-block;
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 14px;
+      font-size: 0.93rem;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--text);
+      transition: all .2s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(47, 107, 255, 0.15);
+    }
+
+    .btn-primary {
+      background: linear-gradient(130deg, var(--primary), var(--primary-2));
+      color: #fff;
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    .btn[disabled] { opacity: 0.56; cursor: not-allowed; transform: none; }
+
+    .hero {
+      padding: 16px;
+      border: 1px solid var(--border);
+      background: linear-gradient(140deg, rgba(47, 107, 255, 0.12), rgba(14, 165, 233, 0.14));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero .headline {
+      margin: 0;
+      font-size: 1.08rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    [data-theme="dark"] .hero .headline { color: #dbeafe; }
+
+    .hero .sub { margin: 6px 0 0; color: var(--muted); font-size: 0.93rem; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 320px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+      letter-spacing: .01em;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: var(--surface-soft);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: inline-block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      min-height: 38px;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+      outline-offset: 0;
+      border-color: var(--primary);
+    }
+
+    textarea { min-height: auto; resize: vertical; }
+
+    .chat-shell {
+      min-height: 520px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+    }
+
+    .chat-window {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(170deg, rgba(255,255,255,0.96), var(--surface-soft));
+      padding: 12px;
+      height: 420px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    [data-theme="dark"] .chat-window {
+      background: linear-gradient(170deg, #111827, #0f172a);
+    }
+
+    .chat-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .chat-row.user { justify-content: flex-end; }
+
+    .chat-row.assistant { justify-content: flex-start; }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .bubble {
+      max-width: 78%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .chat-row.user .bubble {
+      background: linear-gradient(130deg, #dbeafe, #bfdbfe);
+      color: #0f172a;
+    }
+
+    .chat-row.assistant .bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+
+    .chat-controls {
+      display: grid;
+      gap: 8px;
+    }
+
+    .chat-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chat-tip { font-size: 0.84rem; color: var(--muted); }
+
+    .list-wrap {
+      max-height: 420px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .recipe-meta {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .muted-box {
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      background: var(--surface-soft);
+    }
+
+    pre {
+      white-space: pre-wrap;
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono", monospace;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .toast {
+      margin-top: 6px;
+      color: var(--warning);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-window {
+        height: 360px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 12px; }
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .row {
+        grid-template-columns: 1fr;
+      }
+      .chat-row {
+        gap: 6px;
+      }
+      .chat-window { height: 360px; }
+      .bubble { max-width: 88%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" data-theme="light">
+    <header class="topbar">
+      <div>
+        <h1>塗料與樹脂研發工作台</h1>
+        <p>Wayne、Alex、Dios、Gary 具名登入；搜尋打正式材料庫並留下操作者紀錄。</p>
+      </div>
+      <div class="actions">
+        <span id="userBadge" class="badge">尚未登入</span>
+        <span id="healthBadge" class="badge"><span class="status-dot"></span><span>伺服器連線中</span></span>
+        <span id="modelBadge" class="badge">模型載入中</span>
+        <button class="btn" id="toggleTheme">切換深色主題</button>
+        <button class="btn btn-primary" id="clearBtn">清空對話</button>
+        <button class="btn" id="logoutBtn">登出</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <p class="headline">正式材料搜尋 + 具名帳號。AI 只能引用庫內命中，不編造規格。</p>
+      <p class="sub">帳號：Wayne / Alex / Dios / Gary。四人預設密碼相同，登入後可自行修改。</p>
+      <div class="row" id="loginRow" style="margin-top:12px;grid-template-columns:160px 1fr 120px;">
+        <select id="loginName">
+          <option>Wayne</option>
+          <option>Alex</option>
+          <option>Dios</option>
+          <option>Gary</option>
+        </select>
+        <input id="loginPassword" type="password" placeholder="密碼" />
+        <button id="loginBtn" class="btn btn-primary">登入</button>
+      </div>
+      <div class="row" id="passwordRow" style="margin-top:8px;grid-template-columns:1fr 1fr 120px;">
+        <input id="currentPassword" type="password" placeholder="目前密碼（改密用）" />
+        <input id="newPassword" type="password" placeholder="新密碼" />
+        <button id="changePasswordBtn" class="btn">修改密碼</button>
+      </div>
+    </section>
+
+    <div class="dashboard">
+      <section class="panel chat-shell">
+        <h2>AI 真正聊天室</h2>
+        <div id="chatArea" class="chat-window" aria-live="polite"></div>
+        <div class="chat-controls">
+          <label for="question">輸入問題</label>
+          <textarea id="question" rows="3" placeholder="例如：LUX220 能否做水性 UV 木器面漆？"></textarea>
+          <div class="chat-actions">
+            <div class="chat-tip">可輸入食材、口味、預算或時間，按 Enter 傳送（需 <kbd>Ctrl/Cmd + Enter</kbd>）</div>
+            <div style="display:flex; gap:8px;">
+              <button id="askButton" class="btn btn-primary">送出</button>
+              <button id="clearMatchBtn" class="btn">清空結果列</button>
+            </div>
+          </div>
+          <div id="chatToast" class="toast"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>搜尋正式材料</h2>
+        <div class="field">
+          <label for="search">關鍵字（牌號 / 供應商 / 樹脂 / 助劑）</label>
+          <div class="row">
+            <input id="search" placeholder="例如：LUX220、NCO、聚氨酯、安鋒" />
+            <button id="searchBtn" class="btn btn-primary">開始搜尋</button>
+          </div>
+        </div>
+        <div id="list" class="list-wrap"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>新增實驗筆記</h2>
+      <div class="field"><label for="name">名稱</label><input id="name" placeholder="輸入完整菜名"/></div>
+      <div class="field"><label for="ingredients">材料</label><textarea id="ingredients" rows="4" placeholder="可用換行或逗號分隔"></textarea></div>
+      <div class="field"><label for="steps">步驟</label><textarea id="steps" rows="6" placeholder="清楚列出每一步"></textarea></div>
+      <div class="field"><label for="tags">標籤</label><input id="tags" placeholder="例如：便當、晚餐、低油、快速"/></div>
+      <div class="field"><label for="serving">份量</label><input id="serving" type="number" min="1" placeholder="每份多少人份"/></div>
+      <button id="addBtn" class="btn btn-primary">新增到資料庫</button>
+      <div id="addResult" class="muted-box" style="margin-top:10px; white-space: pre-wrap;"></div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      chatHistory: [],
+      isSending: false,
+      matches: [],
+      token: sessionStorage.getItem('companyToken') || '',
+      user: sessionStorage.getItem('companyUser') || '',
+      theme: localStorage.getItem('uiTheme') || 'light',
+    };
+
+    const authHeaders = () => {
+      const headers = { 'Content-Type': 'application/json' };
+      if (state.token) headers.Authorization = `Bearer ${state.token}`;
+      return headers;
+    };
+
+    const setUserBadge = () => {
+      const badge = document.getElementById('userBadge');
+      badge.textContent = state.user ? `使用者：${state.user}` : '尚未登入';
+    };
+
+    const app = document.querySelector('.app');
+    const chatArea = document.getElementById('chatArea');
+    const questionInput = document.getElementById('question');
+    const askButton = document.getElementById('askButton');
+    const searchBtn = document.getElementById('searchBtn');
+    const addBtn = document.getElementById('addBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const clearMatchBtn = document.getElementById('clearMatchBtn');
+    const listBox = document.getElementById('list');
+    const healthBadge = document.getElementById('healthBadge');
+    const modelBadge = document.getElementById('modelBadge');
+    const toast = document.getElementById('chatToast');
+
+    const esc = (text = '') => String(text)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+    const setTheme = (theme) => {
+      state.theme = theme;
+      app.dataset.theme = theme;
+      document.body.dataset.theme = theme;
+      localStorage.setItem('uiTheme', theme);
+      document.getElementById('toggleTheme').textContent = theme === 'dark' ? '切換淺色主題' : '切換深色主題';
+    };
+
+    const toggleTheme = () => setTheme(state.theme === 'dark' ? 'light' : 'dark');
+
+    const setToast = (msg, keepMs = 2500) => {
+      toast.textContent = msg || '';
+      if (keepMs > 0) {
+        setTimeout(() => { if (toast.textContent === msg) toast.textContent = ''; }, keepMs);
+      }
+    };
+
+    const renderRecipeCards = (items) => {
+      if (!items.length) {
+        listBox.innerHTML = '<div class="muted-box">找不到符合條件的結果，建議修改關鍵字後再試。</div>';
+        return;
+      }
+
+      listBox.innerHTML = items.map(item => `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+            <div><strong>${esc(item.name || '')}</strong></div>
+            <div class="chip">${esc(item.material_group || '材料')}</div>
+          </div>
+          <div class="recipe-meta">${esc(item.supplier || '')} ${esc(item.code || item.brand || '')} 完整度 ${item.data_score || 0}</div>
+          <pre>${esc(item.chemistry || item.functions || '')}</pre>
+          <div class="chips">
+            ${item.applications ? `<span class="chip">${esc(item.applications)}</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    };
+
+    const renderChatMatches = () => {
+      if (!state.matches.length) return;
+      const matched = state.matches.slice(0, 3).map(item => `<span class="chip">${esc(item.name)}</span>`).join('');
+      chatArea.insertAdjacentHTML('beforeend', `
+        <div class="chat-row assistant chat-matches">
+          <span class="avatar">i</span>
+          <div class="bubble"><strong>參考配方：</strong> ${matched}</div>
+        </div>
+      `);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    };
+
+    const renderChat = () => {
+      if (!state.chatHistory.length) {
+        chatArea.innerHTML = '<div class="muted-box">聊天室已清空。開始輸入你想做的料理需求吧。</div>';
+        return;
+      }
+
+      chatArea.innerHTML = state.chatHistory.map(item => `
+        <div class="chat-row ${esc(item.role)}">
+          <span class="avatar">${item.role === 'user' ? '你' : 'AI'}</span>
+          <div class="bubble"><strong>${item.role === 'user' ? '你' : 'AI'}：</strong>${esc(item.content)}</div>
+        </div>
+      `).join('');
+      chatArea.scrollTop = chatArea.scrollHeight;
+    };
+
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        const isOk = Boolean(res.ok && data.ok);
+        healthBadge.classList.toggle('offline', !isOk);
+        healthBadge.innerHTML = `<span class="status-dot" style="background:${isOk ? '#16a34a' : '#b91c1c'};box-shadow:0 0 0 3px ${isOk ? 'rgba(22, 163, 74, 0.18)' : 'rgba(185, 28, 28, 0.2)'}"></span> ${isOk ? '伺服器：正常' : '伺服器：異常'}`;
+        const techOk = data.techdb && data.techdb.ok;
+        modelBadge.textContent = `模型：${data.model || '未知'} | 正式庫：${techOk ? (data.techdb.materials + ' 筆') : '未連線'}`;
+      } catch (err) {
+        healthBadge.innerHTML = '<span class="status-dot" style="background:#b91c1c;box-shadow:0 0 0 3px rgba(185, 28, 28, 0.2)"></span> 伺服器：無法連線';
+        modelBadge.textContent = '模型：無法取得';
+      }
+    }
+
+    async function searchRecipes() {
+      const q = document.getElementById('search').value.trim();
+      searchBtn.disabled = true;
+      searchBtn.textContent = '搜尋中...';
+      listBox.innerHTML = '<div class="muted-box">載入中，請稍候…</div>';
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { headers: authHeaders() });
+        const data = await res.json();
+        if (res.status === 401) {
+          listBox.innerHTML = '<div class="muted-box">請先登入後再搜尋。</div>';
+          return;
+        }
+        renderRecipeCards(data.data || []);
+        setToast(`已載入 ${data.count || 0} 筆材料（${data.user || state.user}）。`, 1500);
+      } catch (err) {
+        listBox.innerHTML = '<div class="muted-box">搜尋失敗，請確認伺服器是否啟動。</div>';
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = '開始搜尋';
+      }
+    }
+
+    async function addRecipe() {
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        ingredients: document.getElementById('ingredients').value.trim(),
+        steps: document.getElementById('steps').value.trim(),
+        tags: document.getElementById('tags').value.trim(),
+        serving: Number(document.getElementById('serving').value) || null,
+      };
+
+      if (!payload.name || !payload.ingredients || !payload.steps) {
+        setToast('名稱、材料與步驟為必要欄位。');
+        return;
+      }
+
+      addBtn.disabled = true;
+      addBtn.textContent = '新增中...';
+      const resultBox = document.getElementById('addResult');
+      resultBox.textContent = '新增中，請稍後...';
+      try {
+        const res = await fetch('/api/recipes', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          resultBox.textContent = `新增完成：${data.message}\n${JSON.stringify(data.recipe, null, 2)}`;
+          document.getElementById('name').value = '';
+          document.getElementById('ingredients').value = '';
+          document.getElementById('steps').value = '';
+          document.getElementById('tags').value = '';
+          document.getElementById('serving').value = '';
+          setToast('配方已新增，可在左側搜尋確認。', 1800);
+        } else {
+          resultBox.textContent = `新增失敗：${data.error || '請稍後再試'}`;
+        }
+      } catch (err) {
+        resultBox.textContent = `新增失敗：${err.message}`;
+      } finally {
+        addBtn.disabled = false;
+        addBtn.textContent = '新增到資料庫';
+      }
+    }
+
+    function addMessage(role, content) {
+      const contentText = (content || '').toString().trim();
+      if (!contentText) return;
+      state.chatHistory.push({ role, content: contentText });
+      renderChat();
+      if (role === 'user' && state.chatHistory.length > 40) {
+        state.chatHistory = state.chatHistory.slice(-40);
+      }
+    }
+
+    async function askAI() {
+      if (state.isSending) return;
+      const message = questionInput.value.trim();
+      if (!message) return;
+
+      addMessage('user', message);
+      questionInput.value = '';
+      state.isSending = true;
+      state.matches = [];
+      askButton.disabled = true;
+      askButton.textContent = '回覆中...';
+      renderChat();
+      chatArea.insertAdjacentHTML('beforeend', `
+        <div class="chat-row assistant chat-loading">
+          <span class="avatar">i</span>
+          <div class="bubble">正在向 AI 擷取資料庫上下文並回覆，請稍候…</div>
+        </div>
+      `);
+      chatArea.scrollTop = chatArea.scrollHeight;
+
+      try {
+        const payload = {
+          messages: state.chatHistory
+            .filter(item => item.role === 'user' || item.role === 'assistant')
+            .map(item => ({ role: item.role, content: item.content })),
+        };
+
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        const loadingRow = chatArea.querySelector('.chat-loading');
+        if (loadingRow) {
+          loadingRow.remove();
+        }
+
+        const answer = (data && data.answer) ? data.answer : '回應異常，請稍後再試。';
+        addMessage('assistant', answer);
+        state.matches = Array.isArray(data.matches) ? data.matches : [];
+        renderChat();
+        if (state.matches.length > 0) renderChatMatches();
+      } catch (err) {
+        const loadingRow = chatArea.querySelector('.chat-loading');
+        if (loadingRow) {
+          loadingRow.remove();
+        }
+        addMessage('assistant', '無法聯繫 AI 服務，請確認 Ollama 服務與模型是否啟動。');
+      } finally {
+        state.isSending = false;
+        askButton.disabled = false;
+        askButton.textContent = '送出';
+        questionInput.focus();
+      }
+    }
+
+    function clearChat() {
+      state.chatHistory = [];
+      state.matches = [];
+      renderChat();
+      setToast('對話已清空');
+    };
+
+    function clearMatchesOnly() {
+      state.matches = [];
+      const pills = chatArea.querySelectorAll('.chat-row.chat-matches');
+      pills.forEach((el) => el.remove());
+      setToast('匹配結果已清除');
+    }
+
+    async function login() {
+      const name = document.getElementById('loginName').value;
+      const password = document.getElementById('loginPassword').value;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setToast(data.error || '登入失敗');
+          return;
+        }
+        state.token = data.token;
+        state.user = data.user.name;
+        sessionStorage.setItem('companyToken', state.token);
+        sessionStorage.setItem('companyUser', state.user);
+        document.getElementById('loginPassword').value = '';
+        setUserBadge();
+        setToast(`已登入 ${state.user}`);
+        searchRecipes();
+      } catch (err) {
+        setToast('無法連線工作台');
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() });
+      } catch (err) {}
+      state.token = '';
+      state.user = '';
+      sessionStorage.removeItem('companyToken');
+      sessionStorage.removeItem('companyUser');
+      setUserBadge();
+      listBox.innerHTML = '<div class="muted-box">請先登入。</div>';
+    }
+
+    async function changePassword() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      if (!state.token) {
+        setToast('請先登入再修改密碼');
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setToast(data.error || '改密失敗');
+          return;
+        }
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        setToast('密碼已更新');
+      } catch (err) {
+        setToast('無法連線工作台');
+      }
+    }
+
+    searchBtn.addEventListener('click', searchRecipes);
+    addBtn.addEventListener('click', addRecipe);
+    askButton.addEventListener('click', askAI);
+    clearBtn.addEventListener('click', clearChat);
+    clearMatchBtn.addEventListener('click', clearMatchesOnly);
+    document.getElementById('toggleTheme').addEventListener('click', toggleTheme);
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
+
+    document.getElementById('search').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        searchRecipes();
+      }
+    });
+
+    questionInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        askAI();
+      }
+    });
+
+    setTheme(state.theme);
+    setUserBadge();
+    renderChat();
+    checkHealth();
+    if (state.token) searchRecipes();
+    setInterval(checkHealth, 15000);
+  </script>
+</body>
+</html>

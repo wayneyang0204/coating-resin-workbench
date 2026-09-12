@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+recipes.db
+*.db
+*.db-wal
+*.db-shm
+.streamlit/secrets.toml
+initial_passwords.txt
+tmp_streamlit_source/
+.pytest_cache/
+scripts/*.pids
