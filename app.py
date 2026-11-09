@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import importlib
 import os
 from datetime import datetime
 from io import StringIO
@@ -27,11 +26,12 @@ for _key in ("TECH_DB_API_BASE", "TECH_DB_DEFAULT_PASSWORD", "RECIPE_DB_PATH", "
         os.environ[_key] = _value
 
 import techdb_client  # noqa: E402
+from connection_runtime import refresh_client  # noqa: E402
 
-# Streamlit can retain imported modules while updating app.py. Refresh only
-# this stateless client so a deployment cannot keep the old connection policy.
-importlib.reload(techdb_client)
+# Keep cached clients current without concurrent reloads on every user action.
+techdb_client = refresh_client(techdb_client)
 import backend  # noqa: E402
+backend.techdb_client = techdb_client
 
 LOGO_PATH = _secret_or_env(
     "RECIPE_LOGO_PATH",
