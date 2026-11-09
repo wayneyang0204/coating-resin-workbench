@@ -16,7 +16,8 @@ if (-not (Test-Path $appScript)) {
 }
 
 $env:TECH_DB_API_BASE = "http://127.0.0.1:8765"
-$proc = Start-Process -FilePath $pythonExe -ArgumentList @("-m", "streamlit", "run", $appScript, "--server.port", "$StreamlitPort", "--server.address", $BindHost) -WorkingDirectory $repoRoot -PassThru
+$env:WORKBENCH_DEPLOYMENT = "local"
+$proc = Start-Process -FilePath $pythonExe -ArgumentList @("-m", "streamlit", "run", $appScript, "--server.port", "$StreamlitPort", "--server.address", $BindHost) -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
 
 Set-Content -Path $pidFile -Value @"
 STREAMLIT_PID=$($proc.Id)

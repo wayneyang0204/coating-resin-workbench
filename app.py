@@ -20,7 +20,7 @@ def _secret_or_env(name: str, default: str = "") -> str:
     return os.getenv(name, default)
 
 
-for _key in ("TECH_DB_API_BASE", "TECH_DB_DEFAULT_PASSWORD", "RECIPE_DB_PATH", "OLLAMA_URL"):
+for _key in ("TECH_DB_API_BASE", "TECH_DB_DEFAULT_PASSWORD", "RECIPE_DB_PATH", "OLLAMA_URL", "WORKBENCH_DEPLOYMENT"):
     _value = _secret_or_env(_key)
     if _value:
         os.environ[_key] = _value
@@ -122,12 +122,15 @@ if not st.session_state.auth_user:
     tech = health.get("techdb") if isinstance(health, dict) else {}
     if isinstance(tech, dict) and tech.get("ok"):
         st.success(f"正式庫已連線，材料 {tech.get('materials')} 筆")
+    elif isinstance(tech, dict) and tech.get("availability") == "local_only":
+        st.info(tech["message"])
     elif isinstance(tech, dict) and tech.get("error"):
         st.warning(f"正式庫尚未連上：{tech.get('error')}")
     st.stop()
 
 user = st.session_state.auth_user
 tech = health.get("techdb") if isinstance(health.get("techdb"), dict) else {}
+local_only = tech.get("availability") == "local_only"
 
 with st.sidebar:
     logo = LOGO_PATH if os.path.exists(LOGO_PATH) else None
@@ -135,9 +138,12 @@ with st.sidebar:
         st.image(logo, width=160)
     st.markdown(f"**{user.get('name')}**")
     st.caption(f"角色：{user.get('role')}")
-    st.caption("正式庫：" + (tech.get("url") or "http://127.0.0.1:8765"))
+    if not local_only:
+        st.caption("正式庫：" + (tech.get("url") or "http://127.0.0.1:8765"))
     if tech.get("ok"):
         st.success(f"正式庫 {tech.get('materials')} 筆材料")
+    elif local_only:
+        st.info(tech["message"])
     else:
         st.error(tech.get("error") or "正式庫未連線")
     if st.button("登出", use_container_width=True):
@@ -166,7 +172,7 @@ with st.sidebar:
                     st.error(str(exc))
 
 st.title("塗料與樹脂研發工作台")
-st.caption("搜尋走正式材料庫 :8765；實驗筆記留在本機工作台，並標記操作者。")
+st.caption(tech["message"] if local_only else "搜尋走正式材料庫；實驗筆記存在目前工作台，並標記操作者。")
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("目前使用者", user.get("name"))
@@ -194,7 +200,7 @@ with search_tab:
             else 0,
             format_func=lambda value: "全部正式材料" if not value else value,
         )
-        submitted = right.form_submit_button("搜尋", use_container_width=True)
+        submitted = right.form_submit_button("搜尋", use_container_width=True, disabled=local_only)
     if submitted:
         st.session_state.search_query = query.strip()
         st.session_state.search_group = group
@@ -224,7 +230,7 @@ with chat_tab:
                 st.markdown(
                     f"- **{item.get('name')}** ｜ {item.get('supplier') or ''} ｜ {item.get('material_group') or ''}"
                 )
-    typed = st.chat_input("詢問選材、樹脂合成或驗證步驟。沒搜到的規格不會被填寫。")
+    typed = st.chat_input("詢問選材、樹脂合成或驗證步驟。沒搜到的規格不會被填寫。", disabled=local_only)
     prompt = prefill or typed
     if prompt:
         st.session_state.chat_history.append({"role": "user", "content": prompt})

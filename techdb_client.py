@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import ipaddress
 import os
+from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -10,6 +12,29 @@ from typing import Any
 
 def api_base() -> str:
     return os.getenv("TECH_DB_API_BASE", "http://127.0.0.1:8765").rstrip("/")
+
+
+def local_only_deployment() -> bool:
+    """Cloud cannot reach the company PC through its own loopback address.
+
+    The explicit setting also supports other hosting layouts. Local launchers
+    set 'local'; auto recognizes Community Cloud's mounted source directory.
+    """
+    mode = os.getenv("WORKBENCH_DEPLOYMENT", "auto").strip().lower()
+    if mode not in {"auto", "local", "cloud"}:
+        raise ValueError("WORKBENCH_DEPLOYMENT 必須為 auto、local 或 cloud")
+    cloud = mode == "cloud" or (mode == "auto" and Path('/mount/src') in Path(__file__).resolve().parents)
+    host = urllib.parse.urlsplit(api_base()).hostname or ''
+    loopback = host.rstrip('.').lower() == 'localhost'
+    try:
+        address = ipaddress.ip_address(host)
+        loopback = loopback or address.is_loopback or address.is_unspecified
+    except ValueError:
+        pass
+    return cloud and loopback
+
+
+LOCAL_ONLY_MESSAGE = "雲端版提供實驗筆記與紀錄；正式材料搜尋及技術問答請使用公司本機版。"
 
 
 def _timeout() -> float:
@@ -37,6 +62,8 @@ def compact_material(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _request(path: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:
+    if local_only_deployment():
+        raise RuntimeError(LOCAL_ONLY_MESSAGE)
     query = urllib.parse.urlencode(
         {key: value for key, value in (params or {}).items() if value not in (None, "")},
         doseq=True,
@@ -59,6 +86,9 @@ def _request(path: str, params: dict[str, Any] | None = None, timeout: float | N
 
 
 def health() -> dict[str, Any]:
+    if local_only_deployment():
+        return {"ok": False, "availability": "local_only", "url": api_base(),
+                "message": LOCAL_ONLY_MESSAGE, "error": None}
     try:
         payload = _request("/api/health", timeout=5)
         stats = {}

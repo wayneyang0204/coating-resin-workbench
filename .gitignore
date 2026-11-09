@@ -10,4 +10,5 @@ recipes.db
 initial_passwords.txt
 tmp_streamlit_source/
 .pytest_cache/
+.local_runtime/
 scripts/*.pids

@@ -148,6 +148,9 @@ DB 檔：`recipes.db`（SQLite）
 雲端能用：登入、改密、實驗筆記（存在雲端自己的 SQLite，和公司電腦不是同一份）。
 雲端不能用：正式材料搜尋、Ollama 技術問答。四人查材料請用本機 `http://127.0.0.1:8501`。
 
+雲端使用 loopback 材料庫網址時，頁面會明示為「雲端筆記模式」，不再嘗試連雲端自己的 8765 埠。這不代表正式材料庫已連線；搜尋及問答按鈕在此模式停用。
+`WORKBENCH_DEPLOYMENT` 可設 `local`、`cloud` 或 `auto`（預設）；`auto` 依 Community Cloud 的 `/mount/src` 來源路徑判斷。本機啟動器會明確設為 `local`。若已配置可連線的遠端 `TECH_DB_API_BASE`，仍照常檢查真實連線結果。
+
 1. 私有 GitHub repo（不要公開），不要提交 `recipes.db`、`.venv`、`.streamlit/secrets.toml`。
 2. 到 [share.streamlit.io](https://share.streamlit.io) → New app：
    - Main file path：`app.py`
